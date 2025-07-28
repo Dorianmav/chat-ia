@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PromptTemplate, ChatPromptTemplate } from '@langchain/core/prompts';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 
 @Injectable()
 export class PromptService {
