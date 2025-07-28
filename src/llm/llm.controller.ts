@@ -25,7 +25,6 @@ export class LlmController {
     const responsestreamcontent = [];
     for await (const chunk of responsestream) {
       responsestreamcontent.push(chunk);
-      console.log(chunk.content);
     }   
     return { response: response };
   }
@@ -33,25 +32,34 @@ export class LlmController {
   @Post('chat')
   async chat(@Body() body: Record<string, any>) {
     const model = this.llmService.getModel();
-    let userMessage = body.message;
     
-    // Utiliser un template si spécifié
+    // Si un template est spécifié
     if (body.templateName) {
       // Extraire templateName du body
       const { templateName, ...templateVariables } = body;
       
-      // Utiliser toutes les variables du body pour le template
-      userMessage = await this.promptService.formatPrompt(
-        templateName,
-        templateVariables
-      );
+      try {
+        // Récupérer le template et formater les messages
+        const template = this.promptService.getTemplate(templateName);
+        const formattedMessages = await template.formatMessages(templateVariables);
+        
+        // Invoquer le modèle avec les messages formatés
+        const response = await model.invoke(formattedMessages);
+        return { response: response.content };
+      } catch (error) {
+        console.error('Error processing template:', error);
+        throw new Error(`Error with template ${templateName}: ${error.message}`);
+      }
+    } else if (body.message) {
+      // Si pas de template, utiliser simplement le message utilisateur
+      const response = await model.invoke([
+        new HumanMessage(body.message),
+      ]);
+      
+      return { response: response.content };
+    } else {
+      throw new Error('Either templateName or message must be provided');
     }
-    
-    const response = await model.invoke([
-      new HumanMessage(userMessage),
-    ]);
-    
-    return { response: response.content };
   }
 
   @Get('status')
